@@ -2,28 +2,29 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define ALPHABET_SIZE 26
+
 struct Trie {
     int isWord;
-    struct Trie *next[26];
+    struct Trie *children[ALPHABET_SIZE];
 };
 
 // Function Prototypes
-void insert(struct Trie *pTrie, char *word);
+void insert(struct Trie **ppTrie, char *word);
 int numberOfOccurances(struct Trie *pTrie, char *word);
 struct Trie *deallocateTrie(struct Trie *pTrie);
-struct Trie *createTrie(void);
-void freeTrie(struct Trie *node);
+struct Trie *createNewTrieNode(void);
 
 int main(void)
 {
 	//read the number of the words in the dictionary
 	// parse line  by line, and insert each word to the trie data structure
-    struct Trie* trie = createTrie();
+    struct Trie *trie = NULL;
 	char *pWords[] = {"notaword", "ucf", "no", "note", "corg"};
 
 	for (int i = 0; i < 5; i++)
 	{
-        insert(trie, pWords[i]);
+        insert(&trie, pWords[i]);
 		printf("\t%s : %d\n",pWords[i], numberOfOccurances(trie, pWords[i]));
 	}
 	
@@ -34,76 +35,66 @@ int main(void)
 	return 0;
 }
 
-void insert(struct Trie *pTrie, char *word)
+void insert(struct Trie **ppTrie, char *word)
 {
-	struct Trie *temp = pTrie;
+	struct Trie *temp = *ppTrie;
+
+	if (temp == NULL)
+	{
+		temp = createNewTrieNode();
+		*ppTrie = temp;
+	}
 
 	for (int i = 0; word[i] != '\0'; i++)
 	{
 		int index = (int) word[i] - 'a';
-		if (temp->next[index] == NULL)
-			temp->next[index] = createTrie();
+		if (temp->children[index] == NULL)
+			temp->children[index] = createNewTrieNode();
 
-		temp = temp->next[index];
+		temp = temp->children[index];
 	}
 
-	temp->isWord = 1;
+	temp->isWord++;
 }
 
 // count the number of occurrences of a word if it exists in the dictionary
 int numberOfOccurances(struct Trie *pTrie, char *word)
 {
-	int counter = 0;
 	struct Trie *temp = pTrie;
 	for (int i = 0; word[i] != '\0'; i++)
 	{
-		int position = word[i] - 'a';
-		if (temp->next[position] == NULL)
+		int index = word[i] - 'a';
+		if (temp->children[index] == NULL)
 			return 0;
 
-		temp = temp->next[position];
+		temp = temp->children[index];
 	}
 
-	if (temp != NULL && temp->isWord == 1)
-		return 1;
-	return 0;
+	return temp->isWord;
 }
 
 // deallocate the entirety of dictionary
 struct Trie *deallocateTrie(struct Trie *pTrie)
 {    
-    for (int i = 0; i < 26; i++)
+	if (pTrie == NULL)
+		return NULL;
+	
+    for (int i = 0; i < ALPHABET_SIZE; i++)
     {
-        if (pTrie->next[i] != NULL)
-            deallocateTrie(pTrie->next[i]);
-        else
-            continue;
+        pTrie->children[i] = deallocateTrie(pTrie->children[i]);
     }
-    freeTrie(pTrie);
-	return pTrie;
+
+    free(pTrie);
+	return NULL;
 }
 
 // create new trie node
-struct Trie *createTrie(void)
+struct Trie *createNewTrieNode(void)
 {
 	// allocate memory for a TrieNode
 	struct Trie *node = (struct Trie *) malloc(sizeof(struct Trie));
-	for (int i = 0; i < 26; i++)
-		node->next[i] = NULL;
+	for (int i = 0; i < ALPHABET_SIZE; i++)
+		node->children[i] = NULL;
 	node->isWord = 0;
 	return node;
-}
-
-// free trie node
-void freeTrie(struct Trie *node)
-{
-	// free TrieNode sequence
-	for (int i = 0; i < 26; i++)
-	{
-		if (node->next[i] != NULL)
-			freeTrie(node->next[i]);
-		else
-			continue;
-	}
-	free(node);
 }
